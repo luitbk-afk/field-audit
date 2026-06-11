@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e14">
+<title>현장 방문 감사</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#151a24; --panel2:#1d2430; --line:#2a3340;
+    --txt:#f2f5fa; --dim:#8b97a8;
+    --go:#2563eb; --arrive:#16a34a; --done:#dc2626; --return:#475569;
+    --car:#1f4ea8; --transit:#0f766e; --walk:#92560a;
+    --rec:#ef4444; --ok:#16a34a; --warn:#f59e0b;
+    --mono:"SFMono-Regular",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);
+    display:flex;flex-direction:column;min-height:100dvh;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  header .title{font-weight:800;letter-spacing:.5px;font-size:15px}
+  header .who{font-family:var(--mono);font-size:12px;color:var(--dim);margin-left:auto}
+  .gear{background:none;border:0;color:var(--dim);font-size:20px;padding:4px 6px;cursor:pointer}
+  .statusbar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+  .stat{background:var(--panel);padding:9px 6px;text-align:center}
+  .stat .k{font-size:10px;color:var(--dim);letter-spacing:.3px}
+  .stat .v{font-family:var(--mono);font-size:13px;margin-top:3px;font-weight:600}
+  main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:13px;padding:18px 16px}
+  .state-tag{align-self:center;font-family:var(--mono);font-size:12px;letter-spacing:1px;color:var(--dim);
+    border:1px solid var(--line);border-radius:999px;padding:5px 14px}
+  .rec-box{display:none;align-items:center;justify-content:center;gap:12px;background:var(--panel);
+    border:1px solid #5b1f24;border-radius:14px;padding:16px}
+  .rec-box.on{display:flex}
+  .rec-dot{width:14px;height:14px;border-radius:50%;background:var(--rec);animation:pulse 1.1s infinite}
+  @keyframes pulse{0%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+  .rec-time{font-family:var(--mono);font-size:30px;font-weight:700;letter-spacing:2px}
+  .rec-label{font-size:12px;color:var(--rec);letter-spacing:1px}
+  .btn{border:0;border-radius:18px;color:#fff;font-family:var(--sans);font-weight:800;width:100%;
+    box-shadow:0 6px 0 rgba(0,0,0,.35);cursor:pointer;transition:transform .05s,filter .1s;
+    display:flex;flex-direction:column;align-items:center;gap:5px}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+  .btn .sub{font-size:13px;font-weight:600;opacity:.85}
+  .b-go{background:var(--go);font-size:26px;padding:30px 18px}
+  .b-arrive{background:var(--arrive);font-size:26px;padding:30px 18px}
+  .b-done{background:var(--done);font-size:26px;padding:30px 18px}
+  .b-return{background:var(--return);font-size:18px;padding:18px}
+  .b-mode{font-size:22px;padding:24px 18px;border:3px solid transparent}
+  .b-mode.car{background:var(--car)} .b-mode.transit{background:var(--transit)} .b-mode.walk{background:var(--walk)}
+  .b-mode.last{border-color:#fff}
+  .modegrid{display:flex;flex-direction:column;gap:11px}
+  .row2{display:flex;flex-direction:column;gap:12px}
+  .linkbtn{background:none;border:0;color:var(--dim);text-decoration:underline;font-size:13px;cursor:pointer;align-self:center;padding:6px}
+  footer{border-top:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim)}
+  .pill{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+  .pill.pending{color:var(--warn);border-color:#5a4410}
+  .pill.synced{color:var(--ok);border-color:#1c4a2a}
+  .mini{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:50}
+  .sheet.on{display:flex}
+  .card{background:var(--panel);width:100%;border-radius:18px 18px 0 0;padding:20px 18px 28px;border-top:1px solid var(--line)}
+  .card h2{margin:0 0 14px;font-size:16px}
+  label{display:block;font-size:12px;color:var(--dim);margin:12px 0 6px}
+  input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:13px;font-size:15px;font-family:var(--mono)}
+  .save{margin-top:18px;background:var(--go);color:#fff;border:0;border-radius:12px;padding:14px;width:100%;font-size:16px;font-weight:700}
+  .hint{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#000;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;max-width:90%}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <span class="title">현장 방문 감사</span>
+  <span class="who" id="who">미설정</span>
+  <button class="gear" id="gear" title="설정">⚙</button>
+</header>
+
+<div class="statusbar">
+  <div class="stat"><div class="k">외근 회차</div><div class="v" id="s-trip">-</div></div>
+  <div class="stat"><div class="k">방문 순번</div><div class="v" id="s-seq">-</div></div>
+  <div class="stat"><div class="k">수단</div><div class="v" id="s-mode">-</div></div>
+  <div class="stat"><div class="k">GPS</div><div class="v" id="s-gps">-</div></div>
+</div>
+
+<main>
+  <div class="state-tag" id="stateTag">대기 중</div>
+  <div class="rec-box" id="recBox">
+    <span class="rec-dot"></span>
+    <div style="text-align:center">
+      <div class="rec-label">상담 녹음 중</div>
+      <div class="rec-time" id="recTime">00:00</div>
+    </div>
+  </div>
+  <div id="buttons"></div>
+</main>
+
+<footer>
+  <span class="pill" id="syncPill">대기 0건</span>
+  <span id="netLabel">온라인</span>
+  <button class="mini" id="retryBtn">지금 재전송</button>
+</footer>
+
+<div class="sheet" id="sheet">
+  <div class="card">
+    <h2>설정</h2>
+    <label>직원 식별 (휴대폰번호 또는 사번)</label>
+    <input id="cfgPhone" inputmode="numeric" placeholder="01012345678">
+    <label>서버 주소 (Apps Script 웹앱 /exec URL)</label>
+    <input id="cfgUrl" placeholder="https://script.google.com/macros/s/..../exec">
+    <button class="save" id="saveCfg">저장</button>
+    <p class="hint">서버 주소는 Apps Script를 "웹 앱"으로 배포한 뒤 받는 /exec 주소입니다. 한 번만 입력하면 기기에 저장됩니다.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var CFG = {
+  get:function(){ try{return JSON.parse(localStorage.getItem('fa_cfg')||'{}')}catch(e){return {}} },
+  set:function(o){ localStorage.setItem('fa_cfg', JSON.stringify(o)); }
+};
+var MODE_KO = {car:'자차', transit:'대중교통', walk:'도보'};
+
+var state='select';            // select | ready | moving | site
+var trip=null;                 // {id, seq}
+var visit=null;
+var pendingMode=null, lastMode=null;
+var mediaRecorder=null, chunks=[], recStart=0, recTimer=null, wakeLock=null;
+
+function $(id){ return document.getElementById(id); }
+function now(){ return new Date(); }
+function kst(d){ return d.toLocaleString('ko-KR',{hour12:false}); }
+function fmtTrip(){ return trip ? trip.id.split('-').slice(-1)[0] : '-'; }
+
+var toastT;
+function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('on')},2600); }
+
+function getPos(){
+  return new Promise(function(res){
+    if(!navigator.geolocation){ res(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(p){ res({lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6), acc:Math.round(p.coords.accuracy)}); },
+      function(){ res(null); }, {enableHighAccuracy:true, timeout:10000, maximumAge:5000});
+  });
+}
+function lockScreen(){ try{ if('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(w){wakeLock=w;}); }catch(e){} }
+function unlockScreen(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && state==='site') lockScreen(); });
+
+function startRec(){
+  chunks=[];
+  return navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    var mime='audio/webm;codecs=opus';
+    if(!MediaRecorder.isTypeSupported(mime)) mime='audio/webm';
+    if(!MediaRecorder.isTypeSupported(mime)) mime='';
+    mediaRecorder = new MediaRecorder(stream, mime?{mimeType:mime,audioBitsPerSecond:24000}:{});
+    mediaRecorder.ondataavailable=function(e){ if(e.data.size) chunks.push(e.data); };
+    mediaRecorder.start();
+    recStart=Date.now(); $('recBox').classList.add('on');
+    recTimer=setInterval(function(){ var s=Math.floor((Date.now()-recStart)/1000);
+      $('recTime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); },500);
+    lockScreen();
+  });
+}
+function stopRec(){
+  return new Promise(function(res){
+    if(!mediaRecorder || mediaRecorder.state==='inactive'){ res(null); return; }
+    mediaRecorder.onstop=function(){
+      var blob=new Blob(chunks,{type:mediaRecorder.mimeType||'audio/webm'});
+      mediaRecorder.stream.getTracks().forEach(function(t){t.stop();});
+      clearInterval(recTimer); $('recBox').classList.remove('on'); unlockScreen(); res(blob);
+    };
+    mediaRecorder.stop();
+  });
+}
+
+var DB={
+  db:null,
+  open:function(){ return new Promise(function(res,rej){ var r=indexedDB.open('fa_queue',1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore('q',{keyPath:'id'}); };
+    r.onsuccess=function(){ DB.db=r.result; res(); }; r.onerror=function(){ rej(r.error); }; }); },
+  put:function(it){ return new Promise(function(res,rej){ var t=DB.db.transaction('q','readwrite'); t.objectStore('q').put(it); t.oncomplete=res; t.onerror=function(){rej(t.error)}; }); },
+  all:function(){ return new Promise(function(res){ var out=[]; var t=DB.db.transaction('q','readonly'); var c=t.objectStore('q').openCursor();
+    c.onsuccess=function(e){ var cur=e.target.result; if(cur){out.push(cur.value);cur.continue();}else res(out); }; }); },
+  del:function(id){ return new Promise(function(res){ var t=DB.db.transaction('q','readwrite'); t.objectStore('q').delete(id); t.oncomplete=res; }); }
+};
+function blobToB64(blob){ return new Promise(function(res){ if(!blob){res(null);return;} var r=new FileReader(); r.onloadend=function(){res(r.result.split(',')[1]);}; r.readAsDataURL(blob); }); }
+
+function enqueue(payload, blob){ return DB.put({id:payload.client_id, payload:payload, blob:blob}).then(function(){ trySync(); }); }
+function sendOne(it){
+  var cfg=CFG.get(); var body=Object.assign({}, it.payload);
+  return (it.blob?blobToB64(it.blob):Promise.resolve(null)).then(function(b64){
+    body.audio_b64=b64; body.audio_mime=it.blob?(it.blob.type||'audio/webm'):null;
+    return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'});
+  }).then(function(r){ return r.text(); }).then(function(txt){
+    var ok=false; try{ ok=JSON.parse(txt).ok===true; }catch(e){ ok=/OK/i.test(txt); }
+    if(!ok) throw new Error('server');
+  });
+}
+var syncing=false;
+function trySync(){
+  if(syncing) return Promise.resolve(); syncing=true;
+  return DB.all().then(function(items){
+    var chain=Promise.resolve();
+    items.forEach(function(it){ chain=chain.then(function(){ return sendOne(it).then(function(){ return DB.del(it.id); }); }); });
+    return chain.catch(function(){});
+  }).then(function(){ syncing=false; return refreshPill(); }).catch(function(){ syncing=false; });
+}
+function refreshPill(){ return DB.all().then(function(items){ var n=items.length; var p=$('syncPill');
+  if(n>0){ p.textContent='대기 '+n+'건'; p.className='pill pending'; } else { p.textContent='전송 완료'; p.className='pill synced'; } }); }
+window.addEventListener('online', function(){ $('netLabel').textContent='온라인'; trySync(); });
+window.addEventListener('offline', function(){ $('netLabel').textContent='오프라인'; });
+
+function setGps(pos){ $('s-gps').textContent = pos ? '±'+pos.acc+'m' : '실패'; }
+function render(){
+  $('s-trip').textContent=fmtTrip();
+  $('s-seq').textContent= trip ? '#'+trip.seq : '-';
+  $('s-mode').textContent= pendingMode ? MODE_KO[pendingMode] : '-';
+  var b=$('buttons'); b.innerHTML=''; var tag=$('stateTag');
+  function mk(cls,big,sub,fn){ var el=document.createElement('button'); el.className='btn '+cls;
+    el.innerHTML='<span>'+big+'</span>'+(sub?'<span class="sub">'+sub+'</span>':''); el.onclick=fn; return el; }
+
+  if(state==='select'){
+    tag.textContent = trip ? '다음 방문지 · 이동수단 선택' : '이동수단 선택';
+    var grid=document.createElement('div'); grid.className='modegrid';
+    [['car','자차'],['transit','대중교통'],['walk','도보']].forEach(function(m){
+      var cls='b-mode '+m[0]+(lastMode===m[0]?' last':'');
+      grid.appendChild(mk(cls, m[1], lastMode===m[0]?'직전 선택':'', function(){ pickMode(m[0]); }));
+    });
+    b.appendChild(grid);
+    if(trip){ var rb=mk('b-return','복귀 (외근 종료)','', onReturn); b.appendChild(rb); }
+  } else if(state==='ready'){
+    tag.textContent='출발 준비 · '+MODE_KO[pendingMode];
+    b.appendChild(mk('b-go','출 발', MODE_KO[pendingMode]+'(으)로 이동 시작', onDepart));
+    var ch=document.createElement('button'); ch.className='linkbtn'; ch.textContent='수단 다시 선택'; ch.onclick=function(){ state='select'; render(); };
+    b.appendChild(ch);
+  } else if(state==='moving'){
+    tag.textContent='이동 중 → 현장 · '+MODE_KO[pendingMode];
+    b.appendChild(mk('b-arrive','도 착','누르면 상담 녹음이 시작됩니다', onArrive));
+  } else if(state==='site'){
+    tag.textContent='상담 중 · 녹음 중';
+    b.appendChild(mk('b-done','상담 완료','녹음 종료 후 자동 전송', onDone));
+  }
+}
+
+function guardCfg(){ var c=CFG.get(); if(!c.phone||!c.url){ openSheet(); toast('먼저 설정(직원·서버 주소)을 입력하세요'); return false; } return true; }
+function pickMode(m){ pendingMode=m; state='ready'; render(); }
+function onDepart(){
+  if(!guardCfg()) return;
+  getPos().then(function(pos){
+    setGps(pos); var t=now();
+    if(trip===null){ var ph=CFG.get().phone;
+      trip={ id: ph+'-'+t.toISOString().slice(0,10).replace(/-/g,'')+'-'+String(t.getHours()).padStart(2,'0')+String(t.getMinutes()).padStart(2,'0'), seq:1 };
+    } else { trip.seq+=1; }
+    visit={ depart_time:kst(t), depart_ms:t.getTime(), depart_pos:pos, mode:pendingMode };
+    lastMode=pendingMode; state='moving'; render(); toast('출발 기록 ('+MODE_KO[pendingMode]+')');
+  });
+}
+function onArrive(){
+  getPos().then(function(pos){
+    setGps(pos); var t=now();
+    visit.arrive_time=kst(t); visit.arrive_pos=pos; visit.arrive_ms=t.getTime();
+    startRec().then(function(){ state='site'; render(); toast('도착 · 녹음 시작'); })
+      .catch(function(){ visit.no_audio=true; state='site'; render(); toast('⚠ 마이크 사용 불가 — 녹음 없이 진행'); });
+  });
+}
+function onDone(){
+  var t=now();
+  stopRec().then(function(blob){
+    visit.done_time=kst(t); var doneMs=t.getTime();
+    var moveMin=(visit.depart_ms!=null && visit.arrive_ms!=null)?Math.round((visit.arrive_ms-visit.depart_ms)/60000):'';
+    var talkMin=(visit.arrive_ms!=null)?Math.round((doneMs-visit.arrive_ms)/60000):'';
+    var payload={ action:'visit', client_id:trip.id+'-v'+trip.seq+'-'+Date.now(),
+      phone:CFG.get().phone, trip_id:trip.id, seq:trip.seq, mode:visit.mode,
+      depart_time:visit.depart_time, depart_ms:visit.depart_ms, arrive_time:visit.arrive_time, done_time:visit.done_time,
+      move_min:moveMin, talk_min:talkMin,
+      depart_lat:visit.depart_pos?visit.depart_pos.lat:'', depart_lng:visit.depart_pos?visit.depart_pos.lng:'',
+      arrive_lat:visit.arrive_pos?visit.arrive_pos.lat:'', arrive_lng:visit.arrive_pos?visit.arrive_pos.lng:'',
+      note:visit.no_audio?'녹음없음(마이크불가)':'' };
+    enqueue(payload, blob).then(function(){ state='select'; render(); toast('상담 완료 · 전송 대기열 등록'); });
+  });
+}
+function onReturn(){
+  getPos().then(function(pos){
+    setGps(pos); var t=now();
+    var payload={ action:'return', client_id:trip.id+'-return-'+Date.now(), phone:CFG.get().phone,
+      trip_id:trip.id, return_time:kst(t), return_lat:pos?pos.lat:'', return_lng:pos?pos.lng:'', visits:trip.seq };
+    enqueue(payload, null).then(function(){ trip=null; visit=null; pendingMode=null; state='select'; render(); toast('복귀 기록 · 외근 종료'); });
+  });
+}
+
+function openSheet(){ var c=CFG.get(); $('cfgPhone').value=c.phone||''; $('cfgUrl').value=c.url||''; $('sheet').classList.add('on'); }
+$('gear').onclick=openSheet;
+$('sheet').onclick=function(e){ if(e.target.id==='sheet') $('sheet').classList.remove('on'); };
+$('saveCfg').onclick=function(){
+  var phone=$('cfgPhone').value.trim().replace(/\D/g,''); var url=$('cfgUrl').value.trim();
+  if(!phone||!url){ toast('값을 모두 입력하세요'); return; }
+  CFG.set({phone:phone,url:url}); $('who').textContent=phone; $('sheet').classList.remove('on'); toast('저장되었습니다');
+};
+$('retryBtn').onclick=function(){ trySync(); toast('재전송 시도'); };
+
+DB.open().then(function(){
+  var c=CFG.get(); if(c.phone) $('who').textContent=c.phone;
+  if(!navigator.onLine) $('netLabel').textContent='오프라인';
+  render(); refreshPill(); trySync();
+  setInterval(trySync, 30000);
+});
+</script>
+</body>
+</html>
